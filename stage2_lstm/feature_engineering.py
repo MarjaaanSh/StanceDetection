@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import numpy as np
 from csv import DictReader
+from torch.utils.data import DataLoader
 
 import config
 from training import train_word2vec
@@ -22,6 +23,7 @@ class DataSet():
         self.W2V_SIZE = config.W2V_SIZE
         self.phase = phase
         self.network = network
+        self.batch_size = config.BATCH_SIZE
     
     def make_path(self, phase, type):
         name = phase+'_'+type
@@ -57,7 +59,7 @@ class DataSet():
 
     def extract_features(self, df, phase):
         stance_map = {'agree': 0, 'disagree': 1, 'discuss': 2, 'unrelated': 3}
-        feature_path = self.make_path(phase, 'feature_matrix')
+        feature_path = self.make_path(phase, self.network+'_feature_matrix')
         stance_path = self.make_path(phase, 'stance')
 
         if os.path.exists(feature_path) and os.path.exists(stance_path):
@@ -83,14 +85,18 @@ class DataSet():
             train_df_path = self.make_path('train', 'df')
             val_df_path = self.make_path('val', 'df')
             if os.path.exists(train_df_path) & os.path.exists(val_df_path):
-                train_df = pickle.load(train_df_path)
-                val_df = pickle.load(val_df_path)
+                train_df = pd.read_pickle(train_df_path)
+                val_df = pd.read_pickle(val_df_path)
             else:
                 train_df, val_df = train_test_split(df, test_size=config.TEST_SIZE, random_state=42, 
                                                     stratify=df['Stance'])
+                train_df.to_pickle(train_df_path)
+                val_df.to_pickle(val_df_path)
+
             train_features, train_stances = self.extract_features(train_df, 'train')
             val_features, val_stances = self.extract_features(val_df, 'val')
             result = [train_features, train_stances, val_features, val_stances]
+        
         elif self.phase=='competition_test':
             comp_features, comp_stances = self.extract_features(df, 'competition_test')
             result = [comp_features, comp_stances]
@@ -103,8 +109,15 @@ class DataSet():
             X = X[~unrelateds]
             S = S[~unrelateds]
 
-        X_lengths = [len(x) for x in X]
-        data_loader = [X, S, X_lengths]
+        if self.network == 'lstm':
+            X_lengths = [len(x) for x in X]
+            data_loader = [X, S, X_lengths]
+        elif self.network == 'mlp':
+            data_loader = []
+            Y = [0 if s == 'unrelated' else 1 for s in S]
+            for i in range(X.shape[0]):
+                data_loader.append([X[i], Y[i]])
+            data_loader = DataLoader(data_loader, shuffle=True, batch_size=self.batch_size)
         return data_loader
 
     def normalize_word(self, w):
@@ -170,14 +183,14 @@ class DataSet():
 
         feats = []
         for headline, article in zip(headlines, articles):
-            if self.net == 'mlp':
+            if self.network == 'mlp':
                 headline_vec = self.buildSentenceVector(w2v_model, headline)
                 article_vec = self.buildSentenceVector(w2v_model, article)
                 headline_vec = list(headline_vec)
                 article_vec = list(article_vec)
                 sentence_feat = np.concatenate([headline_vec, article_vec], axis=1)
-
-            elif self.net == 'lstm':          
+                
+            elif self.network == 'lstm':          
                 head_ar = headline + article
                 sentence_feat = self.buildSentenceMat(w2v_model, head_ar)
             
@@ -186,8 +199,3 @@ class DataSet():
         
         w2v_feats = pd.DataFrame(feats)
         return w2v_feats
-
-
-
-
-

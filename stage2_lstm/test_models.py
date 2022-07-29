@@ -3,11 +3,11 @@ import warnings
 
 import torch
 
-from feature_engineering import DataSet
-# from training import *
+from stage2_lstm.feature_engineering import DataSet
+from stage2_lstm import config
 
 # from utils.score import report_score
-from utils.logs import logger
+# from utils.logs import logger
 
 warnings.simplefilter("ignore")
 

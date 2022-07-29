@@ -59,7 +59,7 @@ class DataSet():
 
     def extract_features(self, df, phase):
         stance_map = {'agree': 0, 'disagree': 1, 'discuss': 2, 'unrelated': 3}
-        feature_path = self.make_path(phase, 'feature_matrix')
+        feature_path = self.make_path(phase, self.network+'_feature_matrix')
         stance_path = self.make_path(phase, 'stance')
 
         if os.path.exists(feature_path) and os.path.exists(stance_path):
@@ -96,6 +96,7 @@ class DataSet():
             train_features, train_stances = self.extract_features(train_df, 'train')
             val_features, val_stances = self.extract_features(val_df, 'val')
             result = [train_features, train_stances, val_features, val_stances]
+        
         elif self.phase=='competition_test':
             comp_features, comp_stances = self.extract_features(df, 'competition_test')
             result = [comp_features, comp_stances]
@@ -198,8 +199,3 @@ class DataSet():
         
         w2v_feats = pd.DataFrame(feats)
         return w2v_feats
-
-
-
-
-

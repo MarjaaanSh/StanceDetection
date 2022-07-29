@@ -7,7 +7,7 @@ from feature_engineering import DataSet
 from LSTM import LSTMRelatedDetector
 from utils.logs import logger
 import config
-# from training import *
+
 
 # from utils.score import report_score
 
@@ -19,6 +19,7 @@ random.seed(0)
 if __name__ == "__main__":
     dataset = DataSet('train', 'lstm')
     X_train, s_train, X_val, s_val = dataset.load_features()
+
     train_data_loader = dataset.make_data_loader(X_train, s_train, ommit_unrelateds=True)
     val_data_loader = dataset.make_data_loader(X_val, s_val, ommit_unrelateds=True)
 
@@ -49,12 +50,12 @@ if __name__ == "__main__":
     
     # headline = [stance['Headline'] for stance in stances_comp]
     # body_id = [stance['Body ID'] for stance in stances_comp]
-    #
+    
     # answers = pd.DataFrame()
     # answers['Headline'] = headline
     # answers['Body ID'] = body_id
     # answers['Stance'] = predicted
     # answers.to_csv('answers.csv', index=False, encoding='utf-8')
-    #
+    
 
 
