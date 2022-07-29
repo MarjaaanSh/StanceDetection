@@ -1,0 +1,7 @@
+stage2_lstm/__pycache__/
+stage2_lstm/models/
+stage2_lstm/logs/
+stage2_lstm/for_test.py
+stage2_lstm/data/
+stage2_lstm/.DS_Store/
+stage2_lstm/utils/__pycache__/
