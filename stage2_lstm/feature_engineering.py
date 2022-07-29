@@ -89,6 +89,16 @@ class DataSet():
 
         return result
 
+    def make_data_loader(self, X, S, ommit_unrelateds):
+        if ommit_unrelateds:
+            unrelateds = (S==3)
+            X = X[~unrelateds]
+            S = S[~unrelateds]
+
+        X_lengths = [len(x) for x in X]
+        data_loader = [X, S, X_lengths]
+        return data_loader
+
     def normalize_word(self, w):
         return _wnl.lemmatize(w).lower()
 

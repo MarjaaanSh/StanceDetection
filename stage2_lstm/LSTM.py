@@ -48,46 +48,64 @@ class LSTM(nn.Module):
         X = self.hidden_to_stance(X.view(-1, self.nb_lstm_units))
         return X
 
-class multiStageStanceDetector(nn.Module):
-    def __init__(self):
-        
-        self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
-        self.lstm = LSTM(nb_lstm_units=config.LSTM.HIDDEN_STATE, embedding_dim=config.W2V_SIZE,
-                      batch_size=config.BATCH_SIZE, nb_classes=config.LSTM.classes)
-        self.lstm.to(config.device)
+class LSTMRelatedDetector():
+    def __init__(self, phase, model_path=None):
+        self.phase = phase
+        if phase=='train':
+            self.lstm = LSTM(nb_lstm_units=config.LSTM.HIDDEN_STATE, embedding_dim=config.W2V_SIZE,
+                             batch_size=config.BATCH_SIZE, nb_classes=config.LSTM.classes)
+        elif phase=='eval':
+            self.lstm = torch.load(model_path)
+            self.lstm.eval()
+        self.device = config.device
         self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
         self.optimizer = optim.SGD(self.lstm.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
-        
-    def train_lstm(self, data_loader):
+        self.batch_size = config.BATCH_SIZE
+        self.lstm.to(self.device)
+
+    def get_padded_batch(self, text, padding_value=5):
+        text = [torch.from_numpy(t) for t in text]
+        text = pad_sequence(text, batch_first=True, padding_value=padding_value)
+        text = text.to(device=config.device)
+        return text
+
+    def feed_data(self, data_loader):
         X, S, X_lengths = data_loader
         batches = list(zip(X, S, X_lengths))
         random.shuffle(batches)
 
         n_data = len(X)
-        n_epochs = np.ceil(n_data/config.BATCH_SIZE)
+        n_epochs = np.ceil(n_data/self.batch_size)
         n_epochs = int(n_epochs)
 
-        total_loss = 0
+        total_loss,correct = 0, 0
+        predictions = []
         for epoch in range(n_epochs):
-            start = config.BATCH_SIZE * epoch
-            end = config.BATCH_SIZE * (epoch+1)
-
+            start = self.batch_size * epoch
+            end = self.batch_size * (epoch+1)
             text, stance, lengths = zip(*batches[start:end])
-            text = [torch.from_numpy(t) for t in text]
-            text = pad_sequence(text, batch_first=True, padding_value=5)
-            text = text.to(device=config.device)
 
-            lens = torch.tensor(lengths).to(config.device)
+            text = self.get_padded_batch(text)
+            lens = torch.tensor(lengths).to(self.device)
+            stance = torch.tensor(stance).to(self.device)
 
-            pred = self.forward(text, lens)
-            y = torch.tensor(stance).to(config.device)
+            pred = self.lstm(text, lens)
+            loss = self.loss_fn(pred, stance)
+            total_loss += loss
 
-            loss = self.loss_fn(pred, y)
-            total_loss += loss    
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-    
-    
+            if self.phase == 'train':   
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+
+            elif self.phase == 'eval':
+                correct += (pred.argmax(1) == stance).sum().item()
+                predictions += pred.tolist()
+
         total_loss /= n_epochs
-        return self.lstm, total_loss
+        correct /= n_data
+        accuracy = 100*correct
+        return total_loss.item(), accuracy, predictions
+
+    def update_phase(self, phase):
+        self.phase = phase

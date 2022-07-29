@@ -14,7 +14,6 @@ class logger():
         self.lr = config.SGD.LR
         self.weight_decay = config.SGD.WEIGHT_DECAY
         self.w2v_size = config.W2V_SIZE
-        self.epochs = config.EPOCHS
         self.make_path()
 
     def make_path(self):
