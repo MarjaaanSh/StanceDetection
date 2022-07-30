@@ -16,7 +16,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 import config
 from utils.callback import *
-from neural_networks import MLP
+# from StanceDetection.stage1_mlp.MLP import MLP
 from utils.logs import logger
 
 
@@ -36,29 +36,29 @@ def train_word2vec(sentences):
 
 
 
-def train_clf(train_data_loader, val_data_loader):
-    clf = MLP()
+# def train_clf(train_data_loader, val_data_loader):
+#     clf = MLP()
 
-    loss_fn = nn.CrossEntropyLoss(reduction='mean')
-    optimizer = optim.SGD(clf.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
+#     loss_fn = nn.CrossEntropyLoss(reduction='mean')
+#     optimizer = optim.SGD(clf.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
 
-    clf_logger = logger(optimizer='SGD')
+#     clf_logger = logger(optimizer='SGD')
 
-    EPOCHS = config.MLP.EPOCHS
-    validation_loss_history = []
-    train_loss_history = []
-    validation_acc_history = []
+#     EPOCHS = config.MLP.EPOCHS
+#     validation_loss_history = []
+#     train_loss_history = []
+#     validation_acc_history = []
 
-    for e in range(EPOCHS):
-        clf, train_loss = train_loop(train_data_loader, clf, loss_fn, optimizer)
-        train_loss_history.append({'epoch': e, 'loss': train_loss})
-        if e % 10 == 9:
-            accuracy, validation_loss = test_model(val_data_loader, clf, loss_fn)
-            clf_logger.print_log(e, accuracy, train_loss, validation_loss)
-            validation_loss_history.append({'epoch': e, 'loss': validation_loss})
-            validation_acc_history.append({'epoch': e, 'accuracy': accuracy})
+    # for e in range(EPOCHS):
+    #     clf, train_loss = train_loop(train_data_loader, clf, loss_fn, optimizer)
+    #     train_loss_history.append({'epoch': e, 'loss': train_loss})
+    #     if e % 10 == 9:
+    #         accuracy, validation_loss = test_model(val_data_loader, clf, loss_fn)
+    #         clf_logger.print_log(e, accuracy, train_loss, validation_loss)
+    #         validation_loss_history.append({'epoch': e, 'loss': validation_loss})
+    #         validation_acc_history.append({'epoch': e, 'accuracy': accuracy})
 
-    clf_logger.log('train_loss', train_loss_history)
-    clf_logger.log('val_loss', validation_loss_history)
-    clf_logger.log('val_acc', validation_acc_history)
-    clf_logger.save_model('classifier', clf)
+    # clf_logger.log('train_loss', train_loss_history)
+    # clf_logger.log('val_loss', validation_loss_history)
+    # clf_logger.log('val_acc', validation_acc_history)
+    # clf_logger.save_model('classifier', clf)

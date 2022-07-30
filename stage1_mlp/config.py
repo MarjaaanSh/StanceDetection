@@ -13,7 +13,7 @@ TEST_SIZE = 0.1
 BATCH_SIZE = 64
 
 MLP = edict()
-MLP.EPOCHS = 1000
+MLP.ITERATIONS = 1000
 MLP.SIZE = 512
 MLP.classes = 2
 
@@ -22,4 +22,5 @@ SGD = edict()
 SGD.LR = 1e-2
 SGD.WEIGHT_DECAY = 5e-5
 
+device = 'cuda'
 

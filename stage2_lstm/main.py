@@ -35,7 +35,7 @@ if __name__ == "__main__":
     for e in range(iterations):
         train_loss, _, _ = lstm.feed_data(train_data_loader)
         train_loss_history.append({'epoch': e, 'loss': train_loss})
-        if e % 1 == 0:
+        if e % 10 == 9:
             lstm.update_phase('eval')
             validation_loss, accuracy, _ = lstm.feed_data(val_data_loader)
             lstm.update_phase('train')

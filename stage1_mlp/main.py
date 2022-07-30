@@ -14,7 +14,7 @@ from data_processing import get_data, make_data_loader
 from feature_engineering import DataSet
 # from StanceDetection.stage1_mlp.old_feature_engineering import extract_features, clean_data
 from training import *
-from neural_networks import MLP
+from MLP import UnRelatedDetector
 from utils.logs import logger
 import config
 from utils.score import report_score
@@ -30,30 +30,32 @@ if __name__ == "__main__":
     train_data_loader = dataset.make_data_loader(X_train, y_train, ommit_unrelateds=False)
     val_data_loader = dataset.make_data_loader(X_val, y_val, ommit_unrelateds=False)
 
-    # clf = MLP()
+    mlp = UnRelatedDetector('train')
     # loss_fn = nn.CrossEntropyLoss(reduction='mean')
     # optimizer = optim.SGD(clf.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
 
-    # logger = logger(optimizer='SGD')
+    mlp_logger = logger('mlp')
 
-    # EPOCHS = config.MLP.EPOCHS
-    # validation_loss_history = []
-    # train_loss_history = []
-    # validation_acc_history = []
+    iterations = config.MLP.ITERATIONS
+    validation_loss_history = []
+    train_loss_history = []
+    validation_acc_history = []
 
-    # for e in range(EPOCHS):
-    #     model, train_loss = train_clf(train_data_loader, clf, loss_fn, optimizer)
-    #     train_loss_history.append({'epoch': e, 'loss': train_loss})
-    #     if e % 10 == 9:
-    #         accuracy, validation_loss = test_model(val_data_loader, model, loss_fn)
-    #         logger.print_log(e, accuracy, train_loss, validation_loss)
-    #         validation_loss_history.append({'epoch': e, 'loss': validation_loss})
-    #         validation_acc_history.append({'epoch': e, 'accuracy': accuracy})
+    for e in range(iterations):
+        train_loss, _, _ = mlp.feed_data(train_data_loader)
+        train_loss_history.append({'epoch': e, 'loss': train_loss})
+        if e % 10 == 9:
+            mlp.update_phase('eval')
+            validation_loss, accuracy, _ = mlp.feed_data(val_data_loader)
+            mlp.update_phase('train')
+            mlp_logger.print_log(e, accuracy, train_loss, validation_loss)
+            validation_loss_history.append({'epoch': e, 'loss': validation_loss})
+            validation_acc_history.append({'epoch': e, 'accuracy': accuracy})
 
-    # logger.log('train_loss', train_loss_history)
-    # logger.log('val_loss', validation_loss_history)
-    # logger.log('val_acc', validation_acc_history)
-    # logger.save_model('classifier', model)
+    mlp_logger.log('train_loss', train_loss_history)
+    mlp_logger.log('val_loss', validation_loss_history)
+    mlp_logger.log('val_acc', validation_acc_history)
+    mlp_logger.save_model(mlp)
 
     # with torch.no_grad():
     #     pred = model(torch.tensor(X_val.astype(np.float32)))

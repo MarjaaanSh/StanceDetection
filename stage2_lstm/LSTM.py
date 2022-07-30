@@ -85,7 +85,7 @@ class LSTMRelatedDetector():
             end = self.batch_size * (epoch+1)
             text, stance, lengths = zip(*batches[start:end])
 
-            text = self.get_padded_batch(text)
+            text = self.get_padded_batch(text).to(self.device)
             lens = torch.tensor(lengths).to(self.device)
             stance = torch.tensor(stance).to(self.device)
 

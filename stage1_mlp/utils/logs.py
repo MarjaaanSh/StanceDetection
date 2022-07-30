@@ -8,27 +8,32 @@ import config
 
 
 class logger():
-    def __init__(self, optimizer='SGD'):
-        if optimizer == 'SGD':
-            self.lr = config.SGD.LR
-            self.weight_decay = config.SGD.WEIGHT_DECAY
-        self.mlp_size = config.MLP.SIZE
+    def __init__(self, name, stage=None):
+        self.name = name if name=='mlp' else '{}_stage{}'.format(name, stage)
+        self.hidden_size = config.LSTM.HIDDEN_STATE if name == 'lstm' else config.MLP.SIZE
+        self.lr = config.SGD.LR
+        self.weight_decay = config.SGD.WEIGHT_DECAY
         self.w2v_size = config.W2V_SIZE
-        self.epochs = config.MLP.EPOCHS
+        self.make_path()
 
-    def make_path(self, d_name):
-        name = '{}_lr={}_weightDecay={}_mlpSize={}_w2vSize={}'
-        name = name.format(d_name, self.lr, self.weight_decay, self.mlp_size, self.w2v_size)
-        path = os.path.join(config.LOGS_PATH, name)
-        return path
-
+    def make_path(self):
+        folder_name = '{}_lr={}_weightDecay={}_netSize={}_w2vSize={}'
+        folder_name = folder_name.format(self.name, self.lr, self.weight_decay, self.hidden_size, self.w2v_size)
+        self.log_path = os.path.join(config.LOGS_PATH, folder_name)
+        if not os.path.exists(self.log_path):
+            os.makedirs(self.log_path)
+    
+    def get_path(self):
+        return self.log_path
+    
     def log(self, log_name, log_data):
-        path = self.make_path(log_name)
+        path = os.path.join(self.log_path, log_name)
         df = pd.DataFrame(log_data)
         df.to_pickle(path)
 
-    def save_model(self, model_name, model):
-        path = self.make_path(model_name)
+    def save_model(self, model):
+        path = self.log_path
+        path = os.path.join(path, 'model')
         torch.save(model, path)
 
     def print_log(self, epoch, accuracy, train_loss, validation_loss):

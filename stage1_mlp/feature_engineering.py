@@ -114,10 +114,8 @@ class DataSet():
             data_loader = [X, S, X_lengths]
         elif self.network == 'mlp':
             data_loader = []
-            Y = [0 if s == 'unrelated' else 1 for s in S]
-            for i in range(X.shape[0]):
-                data_loader.append([X[i], Y[i]])
-            data_loader = DataLoader(data_loader, shuffle=True, batch_size=self.batch_size)
+            Y = [0 if s == 3 else 1 for s in S]
+            data_loader = [X, Y]
         return data_loader
 
     def normalize_word(self, w):
