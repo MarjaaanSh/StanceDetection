@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     lstm_logger = logger('lstm', 0)
     
-    iterations = config.ITERATIONS
+    iterations = config.LSTM.ITERATIONS
     validation_loss_history = []
     train_loss_history = []
     validation_acc_history = []

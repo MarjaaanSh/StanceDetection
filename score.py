@@ -20,19 +20,25 @@ def get_score(actual, predicted):
             score += 0.25
     return score
 
-def get_confusion(actual, predicted):
+def get_confusion(actual, predicted, labels):
     d1 = len(set(actual))
     cm = np.zeros((d1, d1))
 
     for (a, p) in zip(actual, predicted):
-        cm[LABELS.index(a)][LABELS.index(p)] += 1
+        cm[labels.index(a)][labels.index(p)] += 1
     tot = cm.sum(axis=1)[:, None]
-    norm_cm = cm / tot
+    norm_cm = np.round(cm / tot, 2)
     return cm, norm_cm
 
-def print_confusion_matrix(cm):
+def print_confusion_matrix(cm, stage, labels):
+    if stage == 'mlp':
+        head_str = "|{:^11}|{:^11}|{:^11}|"
+    elif stage=='lstm':
+        head_str = "|{:^11}|{:^11}|{:^11}|{:^11}|"
+    else:
+        head_str = "|{:^11}|{:^11}|{:^11}|{:^11}|{:^11}|"
+    header = head_str.format('', *labels)
     lines = []
-    header = "|{:^11}|{:^11}|{:^11}|{:^11}|{:^11}|".format('', *LABELS)
     line_len = len(header)
     lines.append("-"*line_len)
     lines.append(header)
@@ -43,21 +49,17 @@ def print_confusion_matrix(cm):
     for i, row in enumerate(cm):
         hit += row[i]
         total += sum(row)
-        lines.append("|{:^11}|{:^11}|{:^11}|{:^11}|{:^11}|".format(LABELS[i],
-                                                                   *row))
+        lines.append(head_str.format(labels[i], *row))
         lines.append("-"*line_len)
     print('\n'.join(lines))
 
 
-def report_score(actual, predicted):
-    confusion, norm_conf = get_confusion(actual, predicted)
-    
-    score = get_score(actual,predicted)
-    best_score  = get_score(actual,actual)
+def report_score(actual, predicted, stage, labels):
+    confusion, norm_conf = get_confusion(actual, predicted, labels)
+    print_confusion_matrix(confusion, stage, labels)
+    print_confusion_matrix(norm_conf, stage, labels)
 
-    print_confusion_matrix(confusion)
-    print_confusion_matrix(norm_conf)
-
-    print("Score: " +str(score) + " out of " + str(best_score) + "\t("+str(score*100/best_score) + "%)")
-
-    return score*100/best_score
+    if stage == 'final':
+        score = get_score(actual,predicted)
+        best_score  = get_score(actual,actual)
+        print("Score: " +str(score) + " out of " + str(best_score) + "\t("+str(score*100/best_score) + "%)")

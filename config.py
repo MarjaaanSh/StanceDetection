@@ -15,18 +15,17 @@ BATCH_SIZE = 64
 MLP = edict()
 MLP.SIZE = 512
 MLP.classes = 2
-MLP.ITERATIONS = 5
+MLP.ITERATIONS = 500
 
 LSTM = edict()
 LSTM.HIDDEN_STATE = 128
 LSTM.classes = 3
-
-
+LSTM.ITERATIONS = 500
 
 OPTIM = 'SGD'
 SGD = edict()
-SGD.LR = 1e-2
-SGD.WEIGHT_DECAY = 5e-5
+SGD.LR = 1e-3
+SGD.WEIGHT_DECAY = 1e-4
 
-device = 'cuda:3'
+device = 'cuda:2'
 

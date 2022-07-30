@@ -1,21 +1,19 @@
-import os.path
-
-import numpy as np
 import warnings
-warnings.simplefilter("ignore")
+import numpy as np
+import random
 
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-import torch.nn as nn
-from torch import optim
+import torch
 
 from feature_engineering import DataSet
-from training import *
+# from training import *
 from MLP import UnRelatedDetector
 from logs import logger
 import config
-# from StanceDetection.stage1_mlp.score import report_score
 
+warnings.simplefilter("ignore")
+torch.manual_seed(0)
+random.seed(0)
 if __name__ == "__main__":
     dataset = DataSet('train', 'mlp')
     X_train, y_train, X_val, y_val = dataset.load_features()
