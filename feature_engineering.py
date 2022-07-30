@@ -1,16 +1,13 @@
-from copyreg import pickle
 import re
 
-from matplotlib.pyplot import prism
 import nltk
 from sklearn import feature_extraction
 import os
 import pandas as pd
 import numpy as np
 from csv import DictReader
-from torch.utils.data import DataLoader
 
-import StanceDetection.stage2_lstm.lstm_config as lstm_config
+import config
 from training import train_word2vec
 
 from gensim.models.word2vec import Word2Vec
@@ -20,14 +17,14 @@ _wnl = nltk.WordNetLemmatizer()
 
 class DataSet():
     def __init__(self, phase, network):
-        self.W2V_SIZE = lstm_config.W2V_SIZE
+        self.W2V_SIZE = config.W2V_SIZE
         self.phase = phase
         self.network = network
-        self.batch_size = lstm_config.BATCH_SIZE
+        self.batch_size = config.BATCH_SIZE
     
     def make_path(self, phase, type):
         name = phase+'_'+type
-        return os.path.join(lstm_config.DATA_PATH, name)
+        return os.path.join(config.DATA_PATH, name)
 
     def read(self, filename, path):
         rows = []
@@ -38,7 +35,7 @@ class DataSet():
         return rows
 
     def load_data(self, name):
-        path = lstm_config.DATA_PATH
+        path = config.DATA_PATH
         stances_path = name + "_stances.csv"
         bodies_path = name + "_bodies.csv"
 
@@ -88,7 +85,7 @@ class DataSet():
                 train_df = pd.read_pickle(train_df_path)
                 val_df = pd.read_pickle(val_df_path)
             else:
-                train_df, val_df = train_test_split(df, test_size=lstm_config.TEST_SIZE, random_state=42, 
+                train_df, val_df = train_test_split(df, test_size=config.TEST_SIZE, random_state=42, 
                                                     stratify=df['Stance'])
                 train_df.to_pickle(train_df_path)
                 val_df.to_pickle(val_df_path)
@@ -143,7 +140,7 @@ class DataSet():
         return df
 
     def buildSentenceMat(self, w2v_model, sentence):
-        embeding_size = lstm_config.W2V_SIZE
+        embeding_size = config.W2V_SIZE
         vocabs = 0
         sentence_matrix = []
         for token in sentence:
@@ -157,7 +154,7 @@ class DataSet():
         return sentence_matrix
 
     def buildSentenceVector(self, w2v_model, sentence):
-        size = lstm_config.W2V_SIZE
+        size = config.W2V_SIZE
         vec = np.zeros((1, size))
         vec_size = 0
         for token in sentence:
@@ -176,7 +173,7 @@ class DataSet():
             w2v_model = train_word2vec(sentences)
         elif name in ['val', 'competition_test']:
             model_name = "word2vec.model"
-            path = os.path.join(lstm_config.MODEL_PATH, model_name)
+            path = os.path.join(config.MODEL_PATH, model_name)
             w2v_model = Word2Vec.load(path).wv
 
         feats = []

@@ -11,15 +11,17 @@ W2V_SIZE = 300
 
 TEST_SIZE = 0.1
 BATCH_SIZE = 64
-ITERATIONS = 500
 
 MLP = edict()
 MLP.SIZE = 512
 MLP.classes = 2
+MLP.ITERATIONS = 5
 
 LSTM = edict()
 LSTM.HIDDEN_STATE = 128
 LSTM.classes = 3
+
+
 
 OPTIM = 'SGD'
 SGD = edict()

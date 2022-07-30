@@ -9,15 +9,12 @@ from sklearn.preprocessing import MinMaxScaler
 import torch.nn as nn
 from torch import optim
 
-from utils.system import parse_params, check_version
-from data_processing import get_data, make_data_loader
 from feature_engineering import DataSet
-# from StanceDetection.stage1_mlp.old_feature_engineering import extract_features, clean_data
 from training import *
 from MLP import UnRelatedDetector
-from utils.logs import logger
+from logs import logger
 import config
-from utils.score import report_score
+# from StanceDetection.stage1_mlp.score import report_score
 
 if __name__ == "__main__":
     dataset = DataSet('train', 'mlp')

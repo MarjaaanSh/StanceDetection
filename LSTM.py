@@ -35,14 +35,14 @@ class LSTM(nn.Module):
         hidden_a = torch.randn(self.nb_lstm_layers, self.batch_size, self.nb_lstm_units)
         hidden_b = torch.randn(self.nb_lstm_layers, self.batch_size, self.nb_lstm_units)
 
-        hidden_a = Variable(hidden_a).to(config.device)
-        hidden_b = Variable(hidden_b).to(config.device)
+        hidden_a = Variable(hidden_a).to(lstm_config.device)
+        hidden_b = Variable(hidden_b).to(lstm_config.device)
 
         return (hidden_a, hidden_b)
 
     def forward(self, X, X_lengths):
         self.hidden = self.init_hidden()
-        X = torch.nn.utils.rnn.pack_padded_sequence(X, X_lengths, batch_first=True, enforce_sorted=False).to(config.device)
+        X = torch.nn.utils.rnn.pack_padded_sequence(X, X_lengths, batch_first=True, enforce_sorted=False).to(lstm_config.device)
         _, self.hidden = self.lstm(X, self.hidden)
         X = self.hidden[0].contiguous()
         X = self.hidden_to_stance(X.view(-1, self.nb_lstm_units))
@@ -51,22 +51,23 @@ class LSTM(nn.Module):
 class LSTMRelatedDetector():
     def __init__(self, phase, model_path=None):
         self.phase = phase
-        if phase=='train':
-            self.lstm = LSTM(nb_lstm_units=config.LSTM.HIDDEN_STATE, embedding_dim=config.W2V_SIZE,
+        self.lstm = LSTM(nb_lstm_units=config.LSTM.HIDDEN_STATE, embedding_dim=config.W2V_SIZE,
                              batch_size=config.BATCH_SIZE, nb_classes=config.LSTM.classes)
-        elif phase=='eval':
+        if phase == 'train':
+            self.optimizer = optim.SGD(self.lstm.parameters(), lr=config.SGD.LR, 
+                                    weight_decay=config.SGD.WEIGHT_DECAY)
+            self.lstm.to(self.device)
+        if phase=='eval':
             self.lstm = torch.load(model_path)
-            self.lstm.eval()
         self.device = config.device
         self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
-        self.optimizer = optim.SGD(self.lstm.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
+
         self.batch_size = config.BATCH_SIZE
-        self.lstm.to(self.device)
 
     def get_padded_batch(self, text, padding_value=5):
         text = [torch.from_numpy(t) for t in text]
         text = pad_sequence(text, batch_first=True, padding_value=padding_value)
-        text = text.to(device=config.device)
+        text = text.to(device=lstm_config.device)
         return text
 
     def feed_data(self, data_loader):

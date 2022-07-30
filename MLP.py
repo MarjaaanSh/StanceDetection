@@ -24,19 +24,17 @@ class MLP(nn.Module):
 class UnRelatedDetector():
     def __init__(self, phase, model_path=None):
         self.phase = phase
-
-        if phase=='train':
-            self.mlp = MLP(input_size=config.W2V_SIZE*2, hidden_size=config.MLP.SIZE,
-                            num_targets=config.MLP.classes)
-        elif phase=='eval':
-            self.mlp = torch.load(model_path)
-            self.mlp.eval()
-
         self.device = config.device
+        self.mlp = MLP(input_size=config.W2V_SIZE*2, hidden_size=config.MLP.SIZE,
+                            num_targets=config.MLP.classes)
+        if phase=='train':
+            self.optimizer = optim.SGD(self.mlp.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
+            self.mlp.to(self.device)
+        if phase=='eval':
+            self.mlp = torch.load(model_path)
+
         self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
-        self.optimizer = optim.SGD(self.mlp.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
         self.batch_size = config.BATCH_SIZE
-        self.mlp.to(self.device)
 
     def feed_data(self, data_loader):
         X, S = data_loader

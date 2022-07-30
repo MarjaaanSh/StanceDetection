@@ -15,7 +15,7 @@ from torch import optim
 from torch.nn.utils.rnn import pad_sequence
 
 import config
-from utils.callback import *
+# from StanceDetection.stage1_mlp.callback import *
 # from StanceDetection.stage1_mlp.MLP import MLP
 from utils.logs import logger
 

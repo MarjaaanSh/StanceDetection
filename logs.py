@@ -4,22 +4,22 @@ import pandas as pd
 
 import torch
 
-import StanceDetection.stage2_lstm.lstm_config as lstm_config
+import config
 
 
 class logger():
     def __init__(self, name, stage=None):
         self.name = name if name=='mlp' else '{}_stage{}'.format(name, stage)
-        self.hidden_size = lstm_config.LSTM.HIDDEN_STATE if name == 'lstm' else lstm_config.MLP.SIZE
-        self.lr = lstm_config.SGD.LR
-        self.weight_decay = lstm_config.SGD.WEIGHT_DECAY
-        self.w2v_size = lstm_config.W2V_SIZE
+        self.hidden_size = config.LSTM.HIDDEN_STATE if name == 'lstm' else config.MLP.SIZE
+        self.lr = config.SGD.LR
+        self.weight_decay = config.SGD.WEIGHT_DECAY
+        self.w2v_size = config.W2V_SIZE
         self.make_path()
 
     def make_path(self):
         folder_name = '{}_lr={}_weightDecay={}_netSize={}_w2vSize={}'
         folder_name = folder_name.format(self.name, self.lr, self.weight_decay, self.hidden_size, self.w2v_size)
-        self.log_path = os.path.join(lstm_config.LOGS_PATH, folder_name)
+        self.log_path = os.path.join(config.LOGS_PATH, folder_name)
         if not os.path.exists(self.log_path):
             os.makedirs(self.log_path)
     

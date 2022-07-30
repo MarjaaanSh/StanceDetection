@@ -1,3 +1,6 @@
+import sys
+sys.path.append('..')
+
 import os
 import pandas as pd
 
@@ -34,7 +37,7 @@ class logger():
     def save_model(self, model):
         path = self.log_path
         path = os.path.join(path, 'model')
-        torch.save(model, path)
+        torch.save(model.state_dict(), path)
 
     def print_log(self, epoch, accuracy, train_loss, validation_loss):
         print(f"Epoch {epoch} | train loss: {train_loss:>7f} | Val Accuracy: {accuracy:>0.1f}% | Val loss: {validation_loss:>8f}")
