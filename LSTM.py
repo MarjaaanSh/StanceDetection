@@ -1,9 +1,12 @@
+from curses import start_color
+from requests import head
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pad_sequence
 from torch import optim
+import torch.nn.functional as F
 
 import random
 import numpy as np
@@ -25,12 +28,22 @@ class LSTM(nn.Module):
 
     def __build_model(self):
 
-        self.lstm = nn.LSTM(
+        self.lstm1 = nn.LSTM(
             input_size=self.embedding_dim,
             hidden_size=self.nb_lstm_units,
             batch_first=True,
         )
-        self.hidden_to_stance = nn.Linear(self.nb_lstm_units, self.nb_classes)
+        self.lstm1 = nn.LSTM(
+            input_size=self.embedding_dim,
+            hidden_size=self.nb_lstm_units,
+            batch_first=True,
+        )
+        self.lstm2 = nn.LSTM(
+            input_size=self.embedding_dim,
+            hidden_size=self.nb_lstm_units,
+            batch_first=True,
+        )
+        self.hidden_to_stance = nn.Linear(self.nb_lstm_units*2, self.nb_classes)
 
     def init_hidden(self):
         # the weights are of the form (nb_layers, batch_size, nb_lstm_units)
@@ -42,13 +55,21 @@ class LSTM(nn.Module):
 
         return (hidden_a, hidden_b)
 
-    def forward(self, X, X_lengths):
-        self.hidden = self.init_hidden()
-        X = torch.nn.utils.rnn.pack_padded_sequence(X, X_lengths, batch_first=True, 
+    def forward(self, headline, article, h_lengths, a_lengths):
+        self.hidden1 = self.init_hidden()
+        headline = torch.nn.utils.rnn.pack_padded_sequence(headline, h_lengths, batch_first=True, 
                                 enforce_sorted=False).to(self.device)
-        _, self.hidden = self.lstm(X, self.hidden)
-        X = self.hidden[0].contiguous()
-        X = self.hidden_to_stance(X.view(-1, self.nb_lstm_units))
+        _, self.hidden1 = self.lstm1(headline, self.hidden1)
+
+        self.hidden2 = self.init_hidden()
+        article = torch.nn.utils.rnn.pack_padded_sequence(article, a_lengths, batch_first=True, 
+                                enforce_sorted=False).to(self.device)
+        _, self.hidden2 = self.lstm2(article, self.hidden2)
+
+        X1 = self.hidden1[0].contiguous()
+        X2 = self.hidden1[0].contiguous()
+        X = torch.cat([X1, X2], dim=2)
+        X = self.hidden_to_stance(X.view(-1, self.nb_lstm_units*2))
         return X
 
 class LSTMRelatedDetector(LSTM):
@@ -60,7 +81,7 @@ class LSTMRelatedDetector(LSTM):
         lr=config.LSTM.SGD.LR, weight_decay=config.LSTM.SGD.WEIGHT_DECAY)
         if phase=='eval':
             model_weights = torch.load(model_path)
-            model_weights = {k[5:]: v for k, v in model_weights.items() if k.startswith('lstm')}
+            model_weights = {k[5:]: v for k, v in model_weights.items() if k.startswith('lstm.')}
             self.lstm.load_state_dict(model_weights)
 
         self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
@@ -73,12 +94,12 @@ class LSTMRelatedDetector(LSTM):
         return text
 
     def feed_data(self, data_loader):
-        X, S, X_lengths = data_loader
-        batches = list(zip(X, S, X_lengths))
+        h, a, S, h_lengths, a_lengths = data_loader
+        batches = list(zip(h, a, S, h_lengths, a_lengths))
         if self.phase == 'train':
             random.shuffle(batches)
 
-        n_data = len(X)
+        n_data = len(h)
         n_epochs = np.ceil(n_data/self.batch_size)
         n_epochs = int(n_epochs)
 
@@ -87,13 +108,15 @@ class LSTMRelatedDetector(LSTM):
         for epoch in range(n_epochs):
             start = self.batch_size * epoch
             end = self.batch_size * (epoch+1)
-            text, stance, lengths = zip(*batches[start:end])
+            headline, article, stance, h_lengths, a_lengths = zip(*batches[start:end])
 
-            text = self.get_padded_batch(text).to(self.device)
-            lens = torch.tensor(lengths).to(self.device)
+            headline = self.get_padded_batch(headline).to(self.device)
+            article = self.get_padded_batch(article).to(self.device)
+            h_lengths = torch.tensor(h_lengths).to(self.device)
+            a_lengths = torch.tensor(a_lengths).to(self.device)
             stance = torch.tensor(stance).to(self.device)
 
-            pred = self.lstm(text, lens)
+            pred = self.lstm(headline, article, h_lengths, a_lengths)
             loss = self.loss_fn(pred, stance)
             total_loss += loss
 

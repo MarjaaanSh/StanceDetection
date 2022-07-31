@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     lstm = LSTMRelatedDetector(phase='train')
 
-    lstm_logger = logger('lstm', 0)
+    # lstm_logger = logger('lstm', 0)
     
     iterations = config.LSTM.ITERATIONS
     validation_loss_history = []
@@ -35,18 +35,18 @@ if __name__ == "__main__":
     for e in range(iterations):
         train_loss, _, _ = lstm.feed_data(train_data_loader)
         train_loss_history.append({'epoch': e, 'loss': train_loss})
-        if e % 10 == 9:
-            lstm.update_phase('eval')
-            validation_loss, accuracy, _ = lstm.feed_data(val_data_loader)
-            lstm.update_phase('train')
-            lstm_logger.print_log(e, accuracy, train_loss, validation_loss)
-            validation_loss_history.append({'epoch': e, 'loss': validation_loss})
-            validation_acc_history.append({'epoch': e, 'accuracy': accuracy})
+    #     if e % 10 == 9:
+    #         lstm.update_phase('eval')
+    #         validation_loss, accuracy, _ = lstm.feed_data(val_data_loader)
+    #         lstm.update_phase('train')
+    #         lstm_logger.print_log(e, accuracy, train_loss, validation_loss)
+    #         validation_loss_history.append({'epoch': e, 'loss': validation_loss})
+    #         validation_acc_history.append({'epoch': e, 'accuracy': accuracy})
 
-    lstm_logger.log('train_loss', train_loss_history)
-    lstm_logger.log('val_loss', validation_loss_history)
-    lstm_logger.log('val_acc', validation_acc_history)
-    lstm_logger.save_model(lstm)
+    # lstm_logger.log('train_loss', train_loss_history)
+    # lstm_logger.log('val_loss', validation_loss_history)
+    # lstm_logger.log('val_acc', validation_acc_history)
+    # lstm_logger.save_model(lstm)
     
     # headline = [stance['Headline'] for stance in stances_comp]
     # body_id = [stance['Body ID'] for stance in stances_comp]

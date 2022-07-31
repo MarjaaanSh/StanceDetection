@@ -26,10 +26,8 @@ if __name__ == "__main__":
     val_data_loader = dataset.make_data_loader(X_val, y_val, ommit_unrelateds=False)
 
     mlp = UnRelatedDetector('train')
-    # loss_fn = nn.CrossEntropyLoss(reduction='mean')
-    # optimizer = optim.SGD(clf.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
 
-    mlp_logger = logger('mlp')
+    # mlp_logger = logger('mlp')
 
     iterations = config.MLP.ITERATIONS
     validation_loss_history = []
@@ -39,18 +37,19 @@ if __name__ == "__main__":
     for e in range(iterations):
         train_loss, _, _ = mlp.feed_data(train_data_loader)
         train_loss_history.append({'epoch': e, 'loss': train_loss})
-        if e % 10 == 9:
-            mlp.update_phase('eval')
-            validation_loss, accuracy, _ = mlp.feed_data(val_data_loader)
-            mlp.update_phase('train')
-            mlp_logger.print_log(e, accuracy, train_loss, validation_loss)
-            validation_loss_history.append({'epoch': e, 'loss': validation_loss})
-            validation_acc_history.append({'epoch': e, 'accuracy': accuracy})
+        break
+    #     if e % 10 == 9:
+    #         mlp.update_phase('eval')
+    #         validation_loss, accuracy, _ = mlp.feed_data(val_data_loader)
+    #         mlp.update_phase('train')
+    #         mlp_logger.print_log(e, accuracy, train_loss, validation_loss)
+    #         validation_loss_history.append({'epoch': e, 'loss': validation_loss})
+    #         validation_acc_history.append({'epoch': e, 'accuracy': accuracy})
 
-    mlp_logger.log('train_loss', train_loss_history)
-    mlp_logger.log('val_loss', validation_loss_history)
-    mlp_logger.log('val_acc', validation_acc_history)
-    mlp_logger.save_model(mlp)
+    # mlp_logger.log('train_loss', train_loss_history)
+    # mlp_logger.log('val_loss', validation_loss_history)
+    # mlp_logger.log('val_acc', validation_acc_history)
+    # mlp_logger.save_model(mlp)
 
     # with torch.no_grad():
     #     pred = model(torch.tensor(X_val.astype(np.float32)))

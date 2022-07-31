@@ -1,16 +1,9 @@
-import numpy as np
 import os.path
 
 from gensim.models.word2vec import Word2Vec
-import torch
-import torch.nn as nn
-from torch import optim
-from torch.nn.utils.rnn import pad_sequence
 
+from callback import callback
 import config
-# from stage2_lstm.callback import *
-# from neural_networks import MLP
-# from StanceDetection.stage2_lstm.logs import logger
 
 
 def train_word2vec(sentences):

@@ -33,7 +33,7 @@ class UnRelatedDetector(MLP):
 
         if phase=='eval':
             model_weights = torch.load(model_path)
-            model_weights = {k[4:]: v for k, v in model_weights.items() if k.startswith('mlp')}
+            model_weights = {k[4:]: v for k, v in model_weights.items() if k.startswith('mlp.')}
             self.mlp.load_state_dict(model_weights)
 
         self.loss_fn = nn.CrossEntropyLoss(reduction='mean')
@@ -70,7 +70,6 @@ class UnRelatedDetector(MLP):
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-
             elif self.phase == 'eval':
                 correct += (pred.argmax(1) == stance).sum().item()
                 predictions += pred.argmax(1).tolist()
