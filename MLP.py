@@ -26,7 +26,7 @@ class UnRelatedDetector(MLP):
     def __init__(self, phase, model_path=None):
         super(UnRelatedDetector, self).__init__()
         self.phase = phase
-        self.device = config.device
+        self.device = config.MLP.DEVICE
         self.mlp = MLP()
         self.optimizer = optim.SGD(self.mlp.parameters(), 
         lr=config.MLP.SGD.LR, weight_decay=config.MLP.SGD.WEIGHT_DECAY)

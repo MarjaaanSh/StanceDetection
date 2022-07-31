@@ -5,7 +5,7 @@ import random
 
 from feature_engineering import DataSet
 from LSTM import LSTMRelatedDetector
-from utils.logs import logger
+from logs import logger
 import config
 
 

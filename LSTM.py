@@ -19,7 +19,7 @@ class LSTM(nn.Module):
         self.embedding_dim = embedding_dim
         self.batch_size = batch_size
         self.nb_lstm_layers = 1
-        self.device = config.device
+        self.device = config.LSTM.DEVICE
     
         self.__build_model()
 
@@ -37,8 +37,8 @@ class LSTM(nn.Module):
         hidden_a = torch.randn(self.nb_lstm_layers, self.batch_size, self.nb_lstm_units)
         hidden_b = torch.randn(self.nb_lstm_layers, self.batch_size, self.nb_lstm_units)
 
-        hidden_a = Variable(hidden_a).to(config.device)
-        hidden_b = Variable(hidden_b).to(config.device)
+        hidden_a = Variable(hidden_a).to(self.device)
+        hidden_b = Variable(hidden_b).to(self.device)
 
         return (hidden_a, hidden_b)
 
@@ -69,7 +69,7 @@ class LSTMRelatedDetector(LSTM):
     def get_padded_batch(self, text, padding_value=5):
         text = [torch.from_numpy(t) for t in text]
         text = pad_sequence(text, batch_first=True, padding_value=padding_value)
-        text = text.to(device=config.device)
+        text = text.to(device=self.device)
         return text
 
     def feed_data(self, data_loader):
