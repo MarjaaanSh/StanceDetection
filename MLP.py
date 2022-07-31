@@ -28,7 +28,8 @@ class UnRelatedDetector(MLP):
         self.phase = phase
         self.device = config.device
         self.mlp = MLP()
-        self.optimizer = optim.SGD(self.mlp.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
+        self.optimizer = optim.SGD(self.mlp.parameters(), 
+        lr=config.MLP.SGD.LR, weight_decay=config.MLP.SGD.WEIGHT_DECAY)
 
         if phase=='eval':
             model_weights = torch.load(model_path)

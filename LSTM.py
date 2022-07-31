@@ -56,7 +56,8 @@ class LSTMRelatedDetector(LSTM):
         super(LSTMRelatedDetector, self).__init__()
         self.phase = phase
         self.lstm = LSTM().to(self.device)
-        self.optimizer = optim.SGD(self.lstm.parameters(), lr=config.SGD.LR, weight_decay=config.SGD.WEIGHT_DECAY)
+        self.optimizer = optim.SGD(self.lstm.parameters(), 
+        lr=config.LSTM.SGD.LR, weight_decay=config.LSTM.SGD.WEIGHT_DECAY)
         if phase=='eval':
             model_weights = torch.load(model_path)
             model_weights = {k[5:]: v for k, v in model_weights.items() if k.startswith('lstm')}

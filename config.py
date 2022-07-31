@@ -16,16 +16,19 @@ MLP = edict()
 MLP.SIZE = 512
 MLP.classes = 2
 MLP.ITERATIONS = 500
+MLP.OPTIM = 'SGD'
+MLP.SGD = edict()
+MLP.SGD.LR = 1e-3
+MLP.SGD.WEIGHT_DECAY = 1e-4
 
 LSTM = edict()
 LSTM.HIDDEN_STATE = 128
 LSTM.classes = 3
 LSTM.ITERATIONS = 500
-
-OPTIM = 'SGD'
-SGD = edict()
-SGD.LR = 1e-3
-SGD.WEIGHT_DECAY = 1e-4
+LSTM.OPTIM = 'SGD'
+LSTM.SGD = edict()
+LSTM.SGD.LR = 1e-2
+LSTM.SGD.WEIGHT_DECAY = 5e-5
 
 device = 'cuda:2'
 

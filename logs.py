@@ -11,8 +11,12 @@ class logger():
     def __init__(self, name, stage=None):
         self.name = name if name=='mlp' else '{}_stage{}'.format(name, stage)
         self.hidden_size = config.LSTM.HIDDEN_STATE if name == 'lstm' else config.MLP.SIZE
-        self.lr = config.SGD.LR
-        self.weight_decay = config.SGD.WEIGHT_DECAY
+        if name == 'mlp':
+            self.lr = config.MLP.SGD.LR
+            self.weight_decay = config.MLP.SGD.WEIGHT_DECAY
+        else:
+            self.lr = config.LSTM.SGD.LR
+            self.weight_decay = config.LSTM.SGD.WEIGHT_DECAY
         self.w2v_size = config.W2V_SIZE
         self.make_path()
 
