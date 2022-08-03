@@ -14,10 +14,16 @@ import numpy as np
 import config
 
 class LSTM(nn.Module):
-    def __init__(self, nb_lstm_units=config.LSTM.HIDDEN_STATE, embedding_dim=config.W2V_SIZE,
+    def __init__(self, nb_lstm_units_h=config.LSTM.HIDDEN_STATE_h, 
+                       nb_lstm_units_a=config.LSTM.HIDDEN_STATE_a,
+                       nb_linear = config.LSTM.LINEAR,
+                       embedding_dim=config.W2V_SIZE,
                        batch_size=config.BATCH_SIZE, nb_classes=config.LSTM.classes):
         super(LSTM, self).__init__()
-        self.nb_lstm_units = nb_lstm_units
+        self.nb_lstm_units_h = nb_lstm_units_h
+        self.nb_lstm_units_a = nb_lstm_units_a
+        self.linear_input_dim = self.nb_lstm_units_h + self.nb_lstm_units_a
+        self.nb_linear = nb_linear
         self.nb_classes = nb_classes
         self.embedding_dim = embedding_dim
         self.batch_size = batch_size
@@ -30,25 +36,23 @@ class LSTM(nn.Module):
 
         self.lstm1 = nn.LSTM(
             input_size=self.embedding_dim,
-            hidden_size=self.nb_lstm_units,
-            batch_first=True,
-        )
-        self.lstm1 = nn.LSTM(
-            input_size=self.embedding_dim,
-            hidden_size=self.nb_lstm_units,
+            hidden_size=self.nb_lstm_units_h,
             batch_first=True,
         )
         self.lstm2 = nn.LSTM(
             input_size=self.embedding_dim,
-            hidden_size=self.nb_lstm_units,
+            hidden_size=self.nb_lstm_units_a,
             batch_first=True,
         )
-        self.hidden_to_stance = nn.Linear(self.nb_lstm_units*2, self.nb_classes)
+        # self.batch_norm1 = nn.BatchNorm1d(self.linear_input_dim)
+        self.attention = nn.Linear(self.linear_input_dim, self.nb_linear)
+        # self.batch_norm2 = nn.BatchNorm1d(self.nb_linear)
+        self.hidden_to_stance = nn.Linear(self.nb_linear, self.nb_classes)
 
-    def init_hidden(self):
+    def init_hidden(self, nb_lstm_units):
         # the weights are of the form (nb_layers, batch_size, nb_lstm_units)
-        hidden_a = torch.randn(self.nb_lstm_layers, self.batch_size, self.nb_lstm_units)
-        hidden_b = torch.randn(self.nb_lstm_layers, self.batch_size, self.nb_lstm_units)
+        hidden_a = torch.randn(self.nb_lstm_layers, self.batch_size, nb_lstm_units)
+        hidden_b = torch.randn(self.nb_lstm_layers, self.batch_size, nb_lstm_units)
 
         hidden_a = Variable(hidden_a).to(self.device)
         hidden_b = Variable(hidden_b).to(self.device)
@@ -56,20 +60,26 @@ class LSTM(nn.Module):
         return (hidden_a, hidden_b)
 
     def forward(self, headline, article, h_lengths, a_lengths):
-        self.hidden1 = self.init_hidden()
+        self.hidden1 = self.init_hidden(self.nb_lstm_units_h)
         headline = torch.nn.utils.rnn.pack_padded_sequence(headline, h_lengths, batch_first=True, 
                                 enforce_sorted=False).to(self.device)
         _, self.hidden1 = self.lstm1(headline, self.hidden1)
 
-        self.hidden2 = self.init_hidden()
+        self.hidden2 = self.init_hidden(self.nb_lstm_units_a)
         article = torch.nn.utils.rnn.pack_padded_sequence(article, a_lengths, batch_first=True, 
                                 enforce_sorted=False).to(self.device)
         _, self.hidden2 = self.lstm2(article, self.hidden2)
 
         X1 = self.hidden1[0].contiguous()
-        X2 = self.hidden1[0].contiguous()
-        X = torch.cat([X1, X2], dim=2)
-        X = self.hidden_to_stance(X.view(-1, self.nb_lstm_units*2))
+        X2 = self.hidden2[0].contiguous()
+        X = torch.cat([X1, X2], dim=2).squeeze(0)
+        X = X.view(-1, self.linear_input_dim)
+
+        # X = self.batch_norm1(X)
+        X = self.attention(X)
+        # X = F.relu(X)
+        # X = self.batch_norm2(X)
+        X = self.hidden_to_stance(X)
         return X
 
 class LSTMRelatedDetector(LSTM):
@@ -79,7 +89,7 @@ class LSTMRelatedDetector(LSTM):
         self.lstm = LSTM().to(self.device)
         self.optimizer = optim.SGD(self.lstm.parameters(), 
         lr=config.LSTM.SGD.LR, weight_decay=config.LSTM.SGD.WEIGHT_DECAY)
-        if phase=='eval':
+        if model_path:
             model_weights = torch.load(model_path)
             model_weights = {k[5:]: v for k, v in model_weights.items() if k.startswith('lstm.')}
             self.lstm.load_state_dict(model_weights)

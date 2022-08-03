@@ -19,11 +19,12 @@ from sklearn.model_selection import train_test_split
 _wnl = nltk.WordNetLemmatizer()
 
 class DataSet():
-    def __init__(self, phase, network):
+    def __init__(self, phase, network, use_transformers):
         self.W2V_SIZE = config.W2V_SIZE
         self.phase = phase
         self.network = network
         self.batch_size = config.BATCH_SIZE
+        self.transformers = use_transformers
     
     def make_path(self, phase, type):
         name = phase+'_'+type
@@ -72,8 +73,8 @@ class DataSet():
             text_feats = self.get_numerical_feats(headlines, articles, phase)
             text_feats.to_pickle(feature_path)
 
-            df['Stance'] = df['Stance'].apply(lambda x: stance_map[x])
-            stances = df['Stance']
+            df['label'] = df['Stance'].apply(lambda x: stance_map[x])
+            stances = df['label']
             stances.to_pickle(stance_path)
 
         text_feats = np.array(text_feats)
@@ -94,10 +95,16 @@ class DataSet():
                 train_df.to_pickle(train_df_path)
                 val_df.to_pickle(val_df_path)
 
-            train_features, train_stances = self.extract_features(train_df, 'train')
-            val_features, val_stances = self.extract_features(val_df, 'val')
-            result = [train_features, train_stances, 
-                      val_features, val_stances]
+            if self.transformers == False:
+                train_features, train_stances = self.extract_features(train_df, 'train')
+                val_features, val_stances = self.extract_features(val_df, 'val')
+                result = [train_features, train_stances, 
+                        val_features, val_stances]
+            else:
+                train_df['label'] = train_df['Stance'].apply(lambda x: config.STANCE_MAP[x])
+                val_df['label'] = val_df['Stance'].apply(lambda x: config.STANCE_MAP[x])
+
+                return [train_df, val_df]
         
         elif self.phase=='competition_test':
             comp_features, comp_stances = self.extract_features(df, 'competition_test')
@@ -201,3 +208,15 @@ class DataSet():
         
         w2v_feats = pd.DataFrame(feats)
         return w2v_feats
+
+    def convert_label_to_stance(self, labels):
+        if self.network == 'mlp':
+            num_s = len(set(labels))
+            if num_s == 4:
+                stances = ['unrelated' if l == 3 else 'related' for l in labels]
+            elif num_s == 2:
+                stances = ['unrelated' if l == 0 else 'related' for l in labels]
+        elif self.network == 'lstm':
+            stances = [config.LABEL_MAP[l] for l in labels]
+        return stances
+

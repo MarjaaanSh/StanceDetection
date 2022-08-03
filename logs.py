@@ -9,8 +9,8 @@ import config
 
 class logger():
     def __init__(self, name, stage=None):
-        self.name = name if name=='mlp' else '{}_stage{}'.format(name, stage)
-        self.hidden_size = config.LSTM.HIDDEN_STATE if name == 'lstm' else config.MLP.SIZE
+        self.name = name if name=='mlp' else '{}_stage_{}'.format(name, stage)
+        self.hidden_size = [config.LSTM.HIDDEN_STATE_h, config.LSTM.HIDDEN_STATE_a, config.LSTM.LINEAR] if name == 'lstm' else config.MLP.SIZE
         if name == 'mlp':
             self.lr = config.MLP.SGD.LR
             self.weight_decay = config.MLP.SGD.WEIGHT_DECAY
@@ -35,9 +35,9 @@ class logger():
         df = pd.DataFrame(log_data)
         df.to_pickle(path)
 
-    def save_model(self, model):
+    def save_model(self, model, epoch):
         path = self.log_path
-        path = os.path.join(path, 'model')
+        path = os.path.join(path, 'model, epoch={}'.format(epoch))
         torch.save(model.state_dict(), path)
 
     def print_log(self, epoch, accuracy, train_loss, validation_loss):
