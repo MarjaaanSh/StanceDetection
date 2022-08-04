@@ -24,7 +24,7 @@ def compute_metrics(pred, actual, network):
 
 def get_mlp_result(name):
     mlp_log = logger('mlp')
-    mlp_path = os.path.join(mlp_log.get_path(), 'model')
+    mlp_path = os.path.join(mlp_log.get_path(), 'model, epoch=999')
     mlp = UnRelatedDetector('eval', mlp_path)
 
     dataset = DataSet(name, 'mlp', False)
@@ -56,21 +56,21 @@ def get_lstm_result(name, stage, lstm_input_idx):
     lstm_path = os.path.join(lstm_log.get_path(), 'model, epoch={}'.format(last_trained_it))
     lstm = LSTMRelatedDetector('eval', lstm_path)
 
-    dataset = DataSet(name, 'lstm', False)
+    dataset = DataSet(name, 'lstm', config.use_transformers)
     _, _, X_val, s_val = dataset.load_features()
 
     X_val = X_val[lstm_input_idx]
     s_val = s_val[lstm_input_idx]
 
     data_loader = dataset.make_data_loader(X_val, s_val, ommit_unrelateds=False)
-    h, a, s, l1, l2 = data_loader
-    data_loader = list(zip(h, a, s, l1, l2))
+    h, a, s, l1, l2, cosines = data_loader
+    data_loader = list(zip(h, a, s, l1, l2, cosines))
     editted = []
-    for h, a, s, l1, l2 in data_loader:
+    for h, a, s, l1, l2, cs in data_loader:
         if l1==0:
-            h = np.random.rand(1, config.W2V_SIZE)
+            h = np.random.rand(1, config.W2V_SIZE).astype(np.float32)
             l1 = len(h)
-        editted.append((h, a, s, l1, l2))
+        editted.append((h, a, s, l1, l2, cs))
     data_loader = list(zip(*editted))
 
     with torch.no_grad():

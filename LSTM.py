@@ -1,5 +1,4 @@
-from curses import start_color
-from requests import head
+
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -22,12 +21,13 @@ class LSTM(nn.Module):
         super(LSTM, self).__init__()
         self.nb_lstm_units_h = nb_lstm_units_h
         self.nb_lstm_units_a = nb_lstm_units_a
-        self.linear_input_dim = self.nb_lstm_units_h + self.nb_lstm_units_a
+        self.linear_input_dim = self.nb_lstm_units_h + self.nb_lstm_units_a + config.LSTM.COSINE_DIM
         self.nb_linear = nb_linear
         self.nb_classes = nb_classes
         self.embedding_dim = embedding_dim
         self.batch_size = batch_size
         self.nb_lstm_layers = 1
+        self.bert_dim = 1024
         self.device = config.LSTM.DEVICE
     
         self.__build_model()
@@ -45,9 +45,9 @@ class LSTM(nn.Module):
             batch_first=True,
         )
         # self.batch_norm1 = nn.BatchNorm1d(self.linear_input_dim)
-        self.attention = nn.Linear(self.linear_input_dim, self.nb_linear)
+        # self.linear = nn.Linear(self.linear_input_dim, self.nb_linear)
         # self.batch_norm2 = nn.BatchNorm1d(self.nb_linear)
-        self.hidden_to_stance = nn.Linear(self.nb_linear, self.nb_classes)
+        self.hidden_to_stance = nn.Linear(self.linear_input_dim, self.nb_classes)
 
     def init_hidden(self, nb_lstm_units):
         # the weights are of the form (nb_layers, batch_size, nb_lstm_units)
@@ -59,7 +59,7 @@ class LSTM(nn.Module):
 
         return (hidden_a, hidden_b)
 
-    def forward(self, headline, article, h_lengths, a_lengths):
+    def forward(self, headline, article, h_lengths, a_lengths, cosine):
         self.hidden1 = self.init_hidden(self.nb_lstm_units_h)
         headline = torch.nn.utils.rnn.pack_padded_sequence(headline, h_lengths, batch_first=True, 
                                 enforce_sorted=False).to(self.device)
@@ -73,10 +73,13 @@ class LSTM(nn.Module):
         X1 = self.hidden1[0].contiguous()
         X2 = self.hidden2[0].contiguous()
         X = torch.cat([X1, X2], dim=2).squeeze(0)
+        #print(cosine.shape)
+        X = torch.cat([X, cosine], dim=1)
+        #print(X.shape)        
         X = X.view(-1, self.linear_input_dim)
 
         # X = self.batch_norm1(X)
-        X = self.attention(X)
+        # X = self.linear(X)
         # X = F.relu(X)
         # X = self.batch_norm2(X)
         X = self.hidden_to_stance(X)
@@ -104,8 +107,8 @@ class LSTMRelatedDetector(LSTM):
         return text
 
     def feed_data(self, data_loader):
-        h, a, S, h_lengths, a_lengths = data_loader
-        batches = list(zip(h, a, S, h_lengths, a_lengths))
+        h, a, S, h_lengths, a_lengths, cosine = data_loader
+        batches = list(zip(h, a, S, h_lengths, a_lengths, cosine))
         if self.phase == 'train':
             random.shuffle(batches)
 
@@ -118,15 +121,15 @@ class LSTMRelatedDetector(LSTM):
         for epoch in range(n_epochs):
             start = self.batch_size * epoch
             end = self.batch_size * (epoch+1)
-            headline, article, stance, h_lengths, a_lengths = zip(*batches[start:end])
-
+            headline, article, stance, h_lengths, a_lengths, cosines = zip(*batches[start:end])
             headline = self.get_padded_batch(headline).to(self.device)
             article = self.get_padded_batch(article).to(self.device)
-            h_lengths = torch.tensor(h_lengths).to(self.device)
-            a_lengths = torch.tensor(a_lengths).to(self.device)
+            h_lengths = torch.tensor(h_lengths)#.to(self.device)
+            a_lengths = torch.tensor(a_lengths)#.to(self.device)
             stance = torch.tensor(stance).to(self.device)
+            cosines = torch.from_numpy(np.vstack(cosines)).type(torch.FloatTensor).to(self.device)
 
-            pred = self.lstm(headline, article, h_lengths, a_lengths)
+            pred = self.lstm(headline, article, h_lengths, a_lengths, cosines)
             loss = self.loss_fn(pred, stance)
             total_loss += loss
 

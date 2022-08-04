@@ -15,7 +15,7 @@ warnings.simplefilter("ignore")
 torch.manual_seed(0)
 random.seed(0)
 if __name__ == "__main__":
-    dataset = DataSet('train', 'mlp')
+    dataset = DataSet('train', 'mlp', False)
     X_train, y_train, X_val, y_val = dataset.load_features()
 
     scaler = MinMaxScaler()
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     mlp_logger.log('train_loss', train_loss_history)
     mlp_logger.log('val_loss', validation_loss_history)
     mlp_logger.log('val_acc', validation_acc_history)
-    mlp_logger.save_model(mlp)
+    mlp_logger.save_model(mlp, e)
 
     # headline = [stance['Headline'] for stance in stances_comp]
     # body_id = [stance['Body ID'] for stance in stances_comp]

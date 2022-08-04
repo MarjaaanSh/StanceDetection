@@ -17,7 +17,7 @@ torch.manual_seed(0)
 random.seed(0)
 
 if __name__ == "__main__":
-    dataset = DataSet('train', 'lstm', False)
+    dataset = DataSet('train', 'lstm', True)
     X_train, s_train, X_val, s_val = dataset.load_features()
 
     train_data_loader = dataset.make_data_loader(X_train, s_train, ommit_unrelateds=True)

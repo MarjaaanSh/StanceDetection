@@ -23,8 +23,9 @@ MLP.SGD.WEIGHT_DECAY = 5e-5
 MLP.DEVICE = 'cuda:0'
 
 LSTM = edict()
-LSTM.HIDDEN_STATE_h = 64
+LSTM.HIDDEN_STATE_h = 32
 LSTM.HIDDEN_STATE_a = 64
+LSTM.COSINE_DIM = 257
 LSTM.LINEAR = 128
 LSTM.classes = 3
 LSTM.ITERATIONS = 200
@@ -34,8 +35,9 @@ LSTM.SGD.LR = 1e-2
 LSTM.SGD.WEIGHT_DECAY = 5e-3
 LSTM.DEVICE = 'cuda:2'
 
-stage = '3targets_two_mlps'
+stage = 'cosine_one_mlp'
 last_it = 199
+use_transformers = True
 
 STANCE_MAP = {'agree': 0, 'disagree': 1, 'discuss': 2, 'unrelated': 3}
 LABEL_MAP ={0: 'agree', 1:'disagree', 2: 'discuss', 3: 'unrelated'}

@@ -1,8 +1,7 @@
+import imp
+
+
 import re
-from typing import NewType
-
-from matplotlib.pyplot import text
-
 import nltk
 from sklearn import feature_extraction
 import os
@@ -15,6 +14,8 @@ from training import train_word2vec
 
 from gensim.models.word2vec import Word2Vec
 from sklearn.model_selection import train_test_split
+from sentence_transformers import SentenceTransformer
+from numpy.linalg import norm
 
 _wnl = nltk.WordNetLemmatizer()
 
@@ -24,7 +25,7 @@ class DataSet():
         self.phase = phase
         self.network = network
         self.batch_size = config.BATCH_SIZE
-        self.transformers = use_transformers
+        self.use_transformers = use_transformers
     
     def make_path(self, phase, type):
         name = phase+'_'+type
@@ -51,10 +52,10 @@ class DataSet():
         articles = pd.DataFrame(articles)
         df = data.merge(articles, on='Body ID')
 
-        print("Total distinct HeadLines: ", df['Headline'].nunique())
-        print("Total distinct BodyIDs: ", df['Body ID'].nunique())
+        # print("Total distinct HeadLines: ", df['Headline'].nunique())
+        # print("Total distinct BodyIDs: ", df['Body ID'].nunique())
 
-        df['relevancy'] = df['Stance'].apply(lambda x: 0 if x == 'unrelated' else 1)
+        #df['relevancy'] = df['Stance'].apply(lambda x: 0 if x == 'unrelated' else 1)
 
         return df
 
@@ -62,6 +63,7 @@ class DataSet():
         stance_map = {'agree': 0, 'disagree': 1, 'discuss': 2, 'unrelated': 3}
         feature_path = self.make_path(phase, self.network+'_feature_matrix')
         stance_path = self.make_path(phase, 'stance')
+        bert_feats = None
 
         if os.path.exists(feature_path) and os.path.exists(stance_path):
             text_feats = pd.read_pickle(feature_path)
@@ -76,10 +78,51 @@ class DataSet():
             df['label'] = df['Stance'].apply(lambda x: stance_map[x])
             stances = df['label']
             stances.to_pickle(stance_path)
-
+        
         text_feats = np.array(text_feats)
         stances = np.array(stances)
+        if self.use_transformers:
+            cosine_bert_feats = self.extract_bert_features(df, phase)
+            text_feats = np.concatenate([text_feats, cosine_bert_feats[:, None]], axis=1)
         return text_feats, stances
+    
+
+
+    def extract_bert_features(self, df, phase):
+        bert_feature_path = self.make_path(phase, self.network+'_bert_feats')
+        cosine_bert_path = self.make_path(phase, self.network+'cosine_bert_feats')
+        if os.path.exists(cosine_bert_path):
+            cosine_bert_feats = pd.read_pickle(cosine_bert_path)
+        else:
+            if os.path.exists(bert_feature_path):
+                df = pd.read_pickle(bert_feature_path)
+            else:
+                model = SentenceTransformer('bert-large-uncased').to(config.LSTM.DEVICE)
+                df['Headline_sentences'] = df['Headline'].apply(lambda x: re.split("[.\n]+", x))
+                df['article_sentences'] = df['articleBody'].apply(lambda x: re.split("[.\n]+", x))
+
+                def encode_row(row):
+                    return model.encode(row)
+
+                df['Headline_sentences'] = df['Headline_sentences'].apply(lambda row: encode_row(row))
+                df['article_sentences'] = df['article_sentences'].apply(lambda row: encode_row(row))
+
+                df[['Headline_sentences', 'article_sentences']].to_pickle(bert_feature_path)
+    
+            def sim(A, B):
+                A = np.array(A).reshape(-1, 1024)
+                B = np.array(B).reshape(1024)
+                return np.dot(A,B)/(norm(A, axis=1)*norm(B))
+
+            df['avg_head'] = df['Headline_sentences'].apply(lambda x: np.mean(x, axis=0) if len(x)>1 else x)
+            df['cosine'] = df.apply(lambda x: sim(x.article_sentences, x.avg_head), axis=1)
+            df['cosine'].to_pickle(cosine_bert_path)
+            cosine_bert_feats = df['cosine']
+        
+        cosine_bert_feats = np.array(cosine_bert_feats)
+        return cosine_bert_feats
+
+
 
     def load_features(self):
         df = self.load_data(self.phase)
@@ -94,17 +137,12 @@ class DataSet():
                                                     stratify=df['Stance'])
                 train_df.to_pickle(train_df_path)
                 val_df.to_pickle(val_df_path)
+                
+            train_features, train_stances = self.extract_features(train_df, 'train')
+            val_features, val_stances = self.extract_features(val_df, 'val')
+            
+            result = [train_features, train_stances, val_features, val_stances]
 
-            if self.transformers == False:
-                train_features, train_stances = self.extract_features(train_df, 'train')
-                val_features, val_stances = self.extract_features(val_df, 'val')
-                result = [train_features, train_stances, 
-                        val_features, val_stances]
-            else:
-                train_df['label'] = train_df['Stance'].apply(lambda x: config.STANCE_MAP[x])
-                val_df['label'] = val_df['Stance'].apply(lambda x: config.STANCE_MAP[x])
-
-                return [train_df, val_df]
         
         elif self.phase=='competition_test':
             comp_features, comp_stances = self.extract_features(df, 'competition_test')
@@ -121,7 +159,14 @@ class DataSet():
 
             h_lengths = [len(x) for x in X[:, 0]]
             a_lengths = [len(x) for x in X[:, 1]]
-            data_loader = [X[:, 0], X[:, 1], S, h_lengths, a_lengths]
+
+            cosine_lengths = [x.shape[0] for x in X[:, 2]]
+            max_cosine_len = config.LSTM.COSINE_DIM
+            n_data = X.shape[0]
+            cosine_arr = np.zeros((n_data, max_cosine_len))
+            for i in range(n_data):
+                cosine_arr[i, :cosine_lengths[i]] = X[i, 2]
+            data_loader = [X[:, 0], X[:, 1], S, h_lengths, a_lengths, cosine_arr]
 
         elif self.network == 'mlp':
             S = [0 if s == 3 else 1 for s in S]
