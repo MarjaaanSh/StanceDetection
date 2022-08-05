@@ -46,7 +46,6 @@ def compute_metrics(pred):
 
 
 def main():
-    device = torch.device('cuda')
     data_dict = get_dataset()
 
     tokenizer = AutoTokenizer.from_pretrained("bert-large-uncased", use_fast=True)

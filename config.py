@@ -8,9 +8,13 @@ MODEL_PATH = os.path.join(ROOT_DIR, 'models')
 LOGS_PATH = os.path.join(ROOT_DIR, 'logs')
 
 W2V_SIZE = 300
+BERT_DIM = 1024
 
 TEST_SIZE = 0.1
 BATCH_SIZE = 64
+
+ARTICLE_MAX_SENTENCES = 28
+
 
 MLP = edict()
 MLP.SIZE = 512
@@ -23,9 +27,8 @@ MLP.SGD.WEIGHT_DECAY = 5e-5
 MLP.DEVICE = 'cuda:0'
 
 LSTM = edict()
-LSTM.HIDDEN_STATE_h = 32
-LSTM.HIDDEN_STATE_a = 64
-LSTM.COSINE_DIM = 257
+LSTM.HIDDEN_STATE_h = 128
+LSTM.HIDDEN_STATE_a = 128
 LSTM.LINEAR = 128
 LSTM.classes = 3
 LSTM.ITERATIONS = 200
@@ -33,10 +36,10 @@ LSTM.OPTIM = 'SGD'
 LSTM.SGD = edict()
 LSTM.SGD.LR = 1e-2
 LSTM.SGD.WEIGHT_DECAY = 5e-3
-LSTM.DEVICE = 'cuda:2'
+LSTM.DEVICE = 'cuda:3'
 
-stage = 'cosine_one_mlp'
-last_it = 199
+stage = 'bert_two_mlps'
+last_it = None
 use_transformers = True
 
 STANCE_MAP = {'agree': 0, 'disagree': 1, 'discuss': 2, 'unrelated': 3}

@@ -17,12 +17,12 @@ class logger():
         else:
             self.lr = config.LSTM.SGD.LR
             self.weight_decay = config.LSTM.SGD.WEIGHT_DECAY
-        self.w2v_size = config.W2V_SIZE
+        # self.w2v_size = config.W2V_SIZE
         self.make_path()
 
     def make_path(self):
-        folder_name = '{}_lr={}_weightDecay={}_netSize={}_w2vSize={}'
-        folder_name = folder_name.format(self.name, self.lr, self.weight_decay, self.hidden_size, self.w2v_size)
+        folder_name = '{}_lr={}_weightDecay={}_netSize={}'
+        folder_name = folder_name.format(self.name, self.lr, self.weight_decay, self.hidden_size)
         self.log_path = os.path.join(config.LOGS_PATH, folder_name)
         if not os.path.exists(self.log_path):
             os.makedirs(self.log_path)
