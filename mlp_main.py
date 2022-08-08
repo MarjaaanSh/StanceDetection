@@ -15,12 +15,13 @@ warnings.simplefilter("ignore")
 torch.manual_seed(0)
 random.seed(0)
 if __name__ == "__main__":
-    dataset = DataSet('train', 'mlp', False)
+    dataset = DataSet('train', 'mlp', True)
     X_train, y_train, X_val, y_val = dataset.load_features()
 
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(np.vstack(X_train.reshape(-1)))
-    X_val = scaler.transform(np.vstack(X_val.reshape(-1)))
+
+    # scaler = MinMaxScaler()
+    # X_train = scaler.fit_transform(np.vstack(X_train.reshape(-1)))
+    # X_val = scaler.transform(np.vstack(X_val.reshape(-1)))
 
     train_data_loader = dataset.make_data_loader(X_train, y_train, ommit_unrelateds=False)
     val_data_loader = dataset.make_data_loader(X_val, y_val, ommit_unrelateds=False)
@@ -44,6 +45,7 @@ if __name__ == "__main__":
             mlp_logger.print_log(e, accuracy, train_loss, validation_loss)
             validation_loss_history.append({'epoch': e, 'loss': validation_loss})
             validation_acc_history.append({'epoch': e, 'accuracy': accuracy})
+            mlp_logger.save_model(mlp, e)
 
     mlp_logger.log('train_loss', train_loss_history)
     mlp_logger.log('val_loss', validation_loss_history)

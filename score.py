@@ -63,3 +63,5 @@ def report_score(actual, predicted, stage, labels):
         score = get_score(actual,predicted)
         best_score  = get_score(actual,actual)
         print("Score: " +str(score) + " out of " + str(best_score) + "\t("+str(score*100/best_score) + "%)")
+    
+    return norm_conf
