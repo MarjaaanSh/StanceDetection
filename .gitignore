@@ -6,3 +6,4 @@ models/
 for_test.py
 .DS_Store/
 *.pyc
+*.png
