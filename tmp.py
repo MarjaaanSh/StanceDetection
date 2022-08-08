@@ -2,6 +2,9 @@ import imp
 
 
 import re
+from matplotlib.pyplot import axis
+
+from requests import head
 import nltk
 from sklearn import feature_extraction
 import os
@@ -21,7 +24,7 @@ _wnl = nltk.WordNetLemmatizer()
 
 class DataSet():
     def __init__(self, phase, network, use_transformers):
-        self.W2V_SIZE = config.W2V_SIZE
+        # self.W2V_SIZE = config.W2V_SIZE
         self.phase = phase
         self.network = network
         self.batch_size = config.BATCH_SIZE
@@ -59,56 +62,13 @@ class DataSet():
 
         return df
 
-    def extract_features(self, df, phase):
-        stance_map = {'agree': 0, 'disagree': 1, 'discuss': 2, 'unrelated': 3}
-        feature_path = self.make_path(phase, self.network+'_feature_matrix')
-        stance_path = self.make_path(phase, 'stance')
-        bert_feats = None
-
-        if os.path.exists(feature_path) and os.path.exists(stance_path):
-            text_feats = pd.read_pickle(feature_path)
-            stances = pd.read_pickle(stance_path)
-        else:
-            df = self.clean_data(df)
-
-            headlines, articles = df['tokenized_Headline'].values.tolist(), df['tokenized_articleBody'].values.tolist()
-            text_feats = self.get_numerical_feats(headlines, articles, phase)
-            text_feats.to_pickle(feature_path)
-
-            df['label'] = df['Stance'].apply(lambda x: stance_map[x])
-            stances = df['label']
-            stances.to_pickle(stance_path)
-        
-        text_feats = np.array(text_feats)
-        stances = np.array(stances)
-        if self.use_transformers:
-            cosine_bert_feats = self.extract_bert_features(df, phase)
-            text_feats = np.concatenate([text_feats, cosine_bert_feats[:, None]], axis=1)
-        return text_feats, stances
-    
-
-
-    def extract_bert_features(self, df, phase):
-        bert_feature_path = self.make_path(phase, self.network+'_bert_feats')
+    def extract_cosine_features(self, df, phase):
         cosine_bert_path = self.make_path(phase, self.network+'cosine_bert_feats')
+        bert_feature_path = self.make_path(phase, self.network+'_bert_feats')
         if os.path.exists(cosine_bert_path):
             cosine_bert_feats = pd.read_pickle(cosine_bert_path)
         else:
-            if os.path.exists(bert_feature_path):
-                df = pd.read_pickle(bert_feature_path)
-            else:
-                model = SentenceTransformer('bert-large-uncased').to(config.LSTM.DEVICE)
-                df['Headline_sentences'] = df['Headline'].apply(lambda x: re.split("[.\n]+", x))
-                df['article_sentences'] = df['articleBody'].apply(lambda x: re.split("[.\n]+", x))
-
-                def encode_row(row):
-                    return model.encode(row)
-
-                df['Headline_sentences'] = df['Headline_sentences'].apply(lambda row: encode_row(row))
-                df['article_sentences'] = df['article_sentences'].apply(lambda row: encode_row(row))
-
-                df[['Headline_sentences', 'article_sentences']].to_pickle(bert_feature_path)
-    
+            df = pd.read_pickle(bert_feature_path)
             def sim(A, B):
                 A = np.array(A).reshape(-1, 1024)
                 B = np.array(B).reshape(1024)
@@ -117,10 +77,73 @@ class DataSet():
             df['avg_head'] = df['Headline_sentences'].apply(lambda x: np.mean(x, axis=0) if len(x)>1 else x)
             df['cosine'] = df.apply(lambda x: sim(x.article_sentences, x.avg_head), axis=1)
             df['cosine'].to_pickle(cosine_bert_path)
-            cosine_bert_feats = df['cosine']
+            cosine_bert_feats = df['cosine'].values.tolist()
+            
         
+        cosine_bert_feats = [x / x.sum() for x in cosine_bert_feats]
         cosine_bert_feats = np.array(cosine_bert_feats)
         return cosine_bert_feats
+
+    def extract_features(self, df, phase):
+        stance_path = self.make_path(phase, 'stance')
+        feature_path = self.make_path(phase, self.network+'_feature_matrix')
+
+        if self.use_transformers:
+            text_feats = self.extract_bert_features(df, phase)
+            if self.network == 'mlp':
+                headlines = [x.mean(axis=0) for x in text_feats[:, 0]]
+                articles = [x.mean(axis=0) for x in text_feats[:, 1]]
+                text_feats = np.concatenate([headlines, articles], axis=1)
+                        
+        if config.use_cosines and self.network!='mlp':
+            cosine_feats = self.extract_cosine_features(df, phase)
+            text_feats = np.concatenate([text_feats, cosine_feats[:, None]], axis=1)
+
+        # if self.network == 'mlp':
+        #     if os.path.exists(feature_path):
+        #         text_feats = pd.read_pickle(feature_path)
+        #     else:
+        #         df = self.clean_data(df)
+
+        #         headlines, articles = df['tokenized_Headline'].values.tolist(), df['tokenized_articleBody'].values.tolist()
+        #         text_feats = self.get_numerical_feats(headlines, articles, phase)
+        #         text_feats.to_pickle(feature_path)            
+
+        if os.path.exists(stance_path):
+            stances = pd.read_pickle(stance_path)
+        else:
+            df = self.clean_data(df)
+            df['label'] = df['Stance'].apply(lambda x: config.STANCE_MAP[x])
+            stances = df['label']
+            stances.to_pickle(stance_path)
+        
+        text_feats = np.array(text_feats)
+        stances = np.array(stances)
+        return text_feats, stances
+    
+
+
+    def extract_bert_features(self, df, phase):
+        bert_feature_path = self.make_path(phase, 'lstm_bert_feats')
+        if os.path.exists(bert_feature_path):
+            df = pd.read_pickle(bert_feature_path)
+            bert_feats = df[['Headline_sentences', 'article_sentences']]
+        else:
+            model = SentenceTransformer('bert-large-uncased').to(config.LSTM.DEVICE)
+            df['Headline_sentences'] = df['Headline'].apply(lambda x: re.split("[.\n]+", x))
+            df['article_sentences'] = df['articleBody'].apply(lambda x: re.split("[.\n]+", x))
+
+            def encode_row(row):
+                return model.encode(row)
+
+            df['Headline_sentences'] = df['Headline_sentences'].apply(lambda row: encode_row(row))
+            df['article_sentences'] = df['article_sentences'].apply(lambda row: encode_row(row))
+
+            df[['Headline_sentences', 'article_sentences']].to_pickle(bert_feature_path)
+            bert_feats = df[['Headline_sentences', 'article_sentences']]
+        
+        bert_feats = np.array(bert_feats)
+        return bert_feats
 
 
 
@@ -137,7 +160,7 @@ class DataSet():
                                                     stratify=df['Stance'])
                 train_df.to_pickle(train_df_path)
                 val_df.to_pickle(val_df_path)
-                
+            
             train_features, train_stances = self.extract_features(train_df, 'train')
             val_features, val_stances = self.extract_features(val_df, 'val')
             
@@ -157,16 +180,22 @@ class DataSet():
                 X = X[~unrelateds, :]
                 S = S[~unrelateds]
 
-            h_lengths = [len(x) for x in X[:, 0]]
-            a_lengths = [len(x) for x in X[:, 1]]
+            headlines = [h.mean(axis=0) for h in X[:, 0]]
+            headlines = np.array(headlines).reshape(-1, config.BERT_DIM)
 
-            cosine_lengths = [x.shape[0] for x in X[:, 2]]
-            max_cosine_len = config.LSTM.COSINE_DIM
-            n_data = X.shape[0]
-            cosine_arr = np.zeros((n_data, max_cosine_len))
-            for i in range(n_data):
-                cosine_arr[i, :cosine_lengths[i]] = X[i, 2]
-            data_loader = [X[:, 0], X[:, 1], S, h_lengths, a_lengths, cosine_arr]
+            article_len = [x.shape[0] for x in X[:, 1]]
+            article_len = [l if l<=config.ARTICLE_MAX_SENTENCES else config.ARTICLE_MAX_SENTENCES for l in article_len]
+            padded_articles = np.zeros((X.shape[0], config.ARTICLE_MAX_SENTENCES, config.BERT_DIM))
+            for i, l in enumerate(article_len):
+                padded_articles[i, :l, :] = X[i, 1][:l]
+
+            data_loader = [headlines, padded_articles, S, article_len]
+
+            if config.use_cosines:
+                padded_cosines = np.zeros((X.shape[0], config.ARTICLE_MAX_SENTENCES))
+                for i, l in enumerate(article_len):
+                    padded_cosines[i, :l] = X[i, 2][:l]
+                data_loader.append(padded_cosines)
 
         elif self.network == 'mlp':
             S = [0 if s == 3 else 1 for s in S]
