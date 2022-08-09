@@ -7,3 +7,9 @@ for_test.py
 .DS_Store/
 *.pyc
 *.png
+bert_main.py
+answers.csv
+res.csv
+test_bert.py
+train_bert.py
+train_trans.py

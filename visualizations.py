@@ -2,7 +2,7 @@ from feature_engineering import DataSet
 
 import pandas as pd
 import matplotlib.pyplot as plt
-from score import report_score
+from StanceDetection.utils.score import report_score
 import seaborn as sn
 
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score

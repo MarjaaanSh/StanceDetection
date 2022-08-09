@@ -4,8 +4,8 @@ import torch
 import random
 
 from feature_engineering import DataSet
-from LSTM import LSTMRelatedDetector
-from logs import logger
+from StanceDetection.networks.LSTM import LSTMRelatedDetector
+from StanceDetection.utils.logs import logger
 import config
 
 

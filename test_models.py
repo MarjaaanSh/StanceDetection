@@ -9,11 +9,11 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import torch
 
-from logs import logger
-from MLP import UnRelatedDetector
-from LSTM import LSTMRelatedDetector
+from utils.logs import logger
+from networks.MLP import UnRelatedDetector
+from networks.LSTM import LSTMRelatedDetector
 from feature_engineering import DataSet
-from score import report_score
+from utils.score import report_score
 import config
 
 from sklearn.metrics import precision_recall_fscore_support
@@ -43,16 +43,8 @@ def get_mlp_result(name):
     mlp_path = os.path.join(mlp_log.get_path(), 'model, epoch={}'.format(config.MLP.last_it))
     mlp = UnRelatedDetector('eval', mlp_path)
 
-    dataset = DataSet(name, 'mlp', True)
+    dataset = DataSet(name, 'mlp')
     X_train, _, X_val, s_val = dataset.load_features()
-
-    # if name == 'competition_test':
-    #     dataset = DataSet('train', 'mlp', False)
-    #     X_train, _, _, _ = dataset.load_features()
-
-    # scaler = MinMaxScaler()
-    # X_train = scaler.fit_transform(np.vstack(X_train.reshape(-1)))
-    # X_val = scaler.transform(np.vstack(X_val.reshape(-1)))
 
     data_loader = dataset.make_data_loader(X_val, s_val, ommit_unrelateds=False)
     with torch.no_grad():
@@ -72,7 +64,7 @@ def get_lstm_result(name, stage, labels, lstm_input_idx=None):
     lstm_path = os.path.join(lstm_log.get_path(), 'model, epoch={}'.format(last_trained_it))
     lstm = LSTMRelatedDetector('eval', lstm_path)
 
-    dataset = DataSet(name, 'lstm', config.use_transformers)
+    dataset = DataSet(name, 'lstm')
     _, _, X_val, s_val = dataset.load_features()
 
     ommit_unrelateds = False
@@ -147,26 +139,6 @@ print((np.array(final_pred_stance) == np.array(all_stances)).sum() / len(final_p
 compute_metrics(final_pred_stance, all_stances, 'Overall')
 conf = report_score(all_stances, final_pred_stance, 'final', ['agree', 'disagree', 'discuss', 'unrelated'])
 
-# actual_agree = [1 if x=='agree' else 0 for x in all_stances]
-# pred_agree = [1 if x=='agree' else 0 for x in final_pred_stance]
-# _, _, f1, _ = precision_recall_fscore_support(actual_agree, pred_agree, average="binary")
-# print('agree', f1)
-
-# actual_agree = [1 if x=='disagree' else 0 for x in all_stances]
-# pred_agree = [1 if x=='disagree' else 0 for x in final_pred_stance]
-# _, _, f1, _ = precision_recall_fscore_support(actual_agree, pred_agree, average="binary")
-# print('disagree', f1)
-
-# actual_agree = [1 if x=='discuss' else 0 for x in all_stances]
-# pred_agree = [1 if x=='discuss' else 0 for x in final_pred_stance]
-# _, _, f1, _ = precision_recall_fscore_support(actual_agree, pred_agree, average="binary")
-# print('discuss', f1)
-
-# actual_agree = [1 if x=='unrelated' else 0 for x in all_stances]
-# pred_agree = [1 if x=='unrelated' else 0 for x in final_pred_stance]
-# _, _, f1, _ = precision_recall_fscore_support(actual_agree, pred_agree, average="binary")
-# print('unrelated', f1)
-
 plt.clf()
 ax = plt.subplot()
 sn.heatmap(conf, annot=True, fmt='g', cmap='BuGn',
@@ -175,3 +147,11 @@ ax.set(xlabel='predicted', ylabel='actual')
 ax.xaxis.set_ticklabels(['agree', 'disagree', 'discuss', 'unrelated'])
 ax.yaxis.set_ticklabels(['agree', 'disagree', 'discuss', 'unrelated'])
 plt.savefig(name+'_overal')
+
+
+name = 'competition_test'
+df = DataSet(name, 'mlp').data
+df = df[['Headline', 'Body ID']]
+df['Stance'] = final_pred_stance
+df.to_csv('answers.csv', index=False, encoding='utf-8')
+
